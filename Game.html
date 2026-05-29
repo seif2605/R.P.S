@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rock Paper Scissors</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e8e8f0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #c8f0c8;
+    margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(100,255,100,0.3);
+  }
+  .subtitle { font-size: 11px; letter-spacing: 3px; color: #556; margin-bottom: 20px; }
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 860px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .player-side, .ai-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .side-label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #556;
+    text-transform: uppercase;
+  }
+  .cam-wrap {
+    position: relative;
+    width: 320px;
+    height: 240px;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #05050f;
+  }
+  #videoEl {
+    position: absolute;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    opacity: 0.85;
+  }
+  #canvasEl {
+    position: absolute;
+    width: 100%; height: 100%;
+    top: 0; left: 0;
+    transform: scaleX(-1);
+  }
+  .cam-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #445;
+    pointer-events: none;
+  }
+  .countdown-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    font-weight: 700;
+    color: #c8f0c8;
+    text-shadow: 0 0 40px rgba(100,255,100,0.8);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .gesture-badge {
+    min-width: 140px;
+    text-align: center;
+    padding: 8px 20px;
+    border: 1px solid #2a3a2a;
+    border-radius: 6px;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: #c8f0c8;
+    background: #0d150d;
+    text-transform: uppercase;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-display {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .score-num {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .score-you { color: #c8f0c8; }
+  .score-ai { color: #f0c8c8; }
+  .score-sep { color: #334; font-size: 28px; }
+  .result-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #556;
+    text-transform: uppercase;
+    min-height: 14px;
+  }
+  .ai-display {
+    width: 320px;
+    height: 240px;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    background: #05050f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-thinking {
+    position: absolute;
+    bottom: 12px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #445;
+    text-transform: uppercase;
+  }
+  .status-bar {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .status-text {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #778;
+    text-transform: uppercase;
+    flex: 1;
+    text-align: center;
+  }
+  #startBtn {
+    padding: 10px 32px;
+    background: transparent;
+    border: 1px solid #4a8a4a;
+    border-radius: 6px;
+    color: #c8f0c8;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #startBtn:hover { background: #0d200d; }
+  #startBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .rounds-log {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-height: 30px;
+  }
+  .round-pip {
+    width: 24px; height: 24px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .pip-win { background: #1a3a1a; color: #c8f0c8; }
+  .pip-lose { background: #3a1a1a; color: #f0c8c8; }
+  .pip-tie { background: #1a1a2a; color: #a0a0c0; }
+</style>
+</head>
+<body>
+
+<h1>RPS</h1>
+<div class="subtitle">Rock · Paper · Scissors</div>
+
+<div class="arena">
+  <div class="player-side">
+    <div class="side-label">You</div>
+    <div class="cam-wrap">
+      <video id="videoEl" playsinline autoplay muted></video>
+      <canvas id="canvasEl" width="320" height="240"></canvas>
+      <div class="cam-overlay" id="camOverlay">CAMERA LOADING...</div>
+      <div class="countdown-overlay" id="countdownOverlay"></div>
+    </div>
+    <div class="gesture-badge" id="playerGesture">—</div>
+  </div>
+
+  <div class="score-center">
+    <div class="result-label" id="resultLabel">get ready</div>
+    <div class="score-display">
+      <span class="score-num score-you" id="scoreYou">0</span>
+      <span class="score-sep">:</span>
+      <span class="score-num score-ai" id="scoreAi">0</span>
+    </div>
+    <div class="result-label" id="tieLabel"></div>
+  </div>
+
+  <div class="ai-side">
+    <div class="side-label">AI</div>
+    <div class="ai-display">
+      <span id="aiEmoji">🤖</span>
+      <span class="ai-thinking" id="aiThinking">waiting</span>
+    </div>
+    <div class="gesture-badge" id="aiGesture">—</div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="status-text" id="statusText">Allow camera access, then press Start Round</span>
+  <button id="startBtn">Start Round</button>
+</div>
+
+<div class="rounds-log" id="roundsLog"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js" crossorigin="anonymous"></script>
+
+<script>
+const videoEl = document.getElementById('videoEl');
+const canvasEl = document.getElementById('canvasEl');
+const ctx = canvasEl.getContext('2d');
+const camOverlay = document.getElementById('camOverlay');
+const countdownOverlay = document.getElementById('countdownOverlay');
+const playerGestureEl = document.getElementById('playerGesture');
+const aiGestureEl = document.getElementById('aiGesture');
+const aiEmojiEl = document.getElementById('aiEmoji');
+const aiThinkingEl = document.getElementById('aiThinking');
+const scoreYouEl = document.getElementById('scoreYou');
+const scoreAiEl = document.getElementById('scoreAi');
+const resultLabelEl = document.getElementById('resultLabel');
+const tieLabelEl = document.getElementById('tieLabel');
+const statusTextEl = document.getElementById('statusText');
+const startBtn = document.getElementById('startBtn');
+const roundsLog = document.getElementById('roundsLog');
+
+const AI_CHOICES = ['rock','paper','scissors'];
+const EMOJI_MAP = { rock:'✊', paper:'🖐', scissors:'✌️' };
+
+let state = 'IDLE';
+let scoreYou = 0, scoreAi = 0;
+let currentLandmarks = null;
+
+function classifyGesture(landmarks) {
+  if (!landmarks || landmarks.length < 21) return null;
+  const tips = [8, 12, 16, 20];
+  const pips = [6, 10, 14, 18];
+  const extended = tips.map((tip, i) => landmarks[tip].y < landmarks[pips[i]].y);
+  const [indexE, middleE, ringE, pinkyE] = extended;
+  if (!indexE && !middleE && !ringE && !pinkyE) return 'rock';
+  if (indexE && middleE && ringE && pinkyE) return 'paper';
+  if (indexE && middleE && !ringE && !pinkyE) return 'scissors';
+  return null;
+}
+
+function drawSkeleton(landmarks) {
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  if (!landmarks) return;
+  const connections = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [9,10],[10,11],[11,12],
+    [13,14],[14,15],[15,16],
+    [17,18],[18,19],[19,20],
+    [0,17],[5,9],[9,13],[13,17]
+  ];
+  ctx.strokeStyle = 'rgba(100,255,100,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  connections.forEach(([a,b]) => {
+    ctx.moveTo(landmarks[a].x * canvasEl.width, landmarks[a].y * canvasEl.height);
+    ctx.lineTo(landmarks[b].x * canvasEl.width, landmarks[b].y * canvasEl.height);
+  });
+  ctx.stroke();
+  landmarks.forEach((lm, i) => {
+    ctx.beginPath();
+    ctx.arc(lm.x * canvasEl.width, lm.y * canvasEl.height, i === 0 ? 5 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = [4,8,12,16,20].includes(i) ? 'rgba(200,255,200,0.9)' : 'rgba(100,200,100,0.7)';
+    ctx.fill();
+  });
+}
+
+function judge(you, ai) {
+  if (you === ai) return 'tie';
+  if ((you==='rock'&&ai==='scissors')||(you==='paper'&&ai==='rock')||(you==='scissors'&&ai==='paper')) return 'win';
+  return 'lose';
+}
+
+function addRoundPip(result) {
+  const pip = document.createElement('div');
+  pip.className = 'round-pip ' + (result==='win'?'pip-win':result==='lose'?'pip-lose':'pip-tie');
+  pip.textContent = result==='win'?'W':result==='lose'?'L':'T';
+  roundsLog.appendChild(pip);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runRound() {
+  if (state !== 'IDLE') return;
+  state = 'COUNTDOWN';
+  startBtn.disabled = true;
+  aiEmojiEl.textContent = '🤔';
+  aiThinkingEl.textContent = 'thinking...';
+  aiGestureEl.textContent = '—';
+  resultLabelEl.textContent = '';
+  tieLabelEl.textContent = '';
+
+  for (const count of ['3','2','1','✊']) {
+    countdownOverlay.textContent = count;
+    countdownOverlay.style.opacity = '1';
+    await sleep(count === '✊' ? 600 : 800);
+    countdownOverlay.style.opacity = '0';
+    await sleep(150);
+  }
+
+  state = 'CAPTURE';
+  statusTextEl.textContent = 'Capturing...';
+  const yourGesture = classifyGesture(currentLandmarks);
+  await sleep(200);
+
+  const aiChoice = AI_CHOICES[Math.floor(Math.random() * 3)];
+  aiEmojiEl.textContent = EMOJI_MAP[aiChoice];
+  aiGestureEl.textContent = aiChoice.toUpperCase();
+  aiThinkingEl.textContent = '';
+
+  if (!yourGesture) {
+    playerGestureEl.textContent = '?';
+    resultLabelEl.textContent = 'NO HAND DETECTED';
+    resultLabelEl.style.color = '#778';
+    tieLabelEl.textContent = 'try again';
+  } else {
+    playerGestureEl.textContent = yourGesture.toUpperCase();
+    const result = judge(yourGesture, aiChoice);
+    if (result === 'win') scoreYou++;
+    else if (result === 'lose') scoreAi++;
+    scoreYouEl.textContent = scoreYou;
+    scoreAiEl.textContent = scoreAi;
+    resultLabelEl.textContent = result === 'win' ? 'YOU WIN' : result === 'lose' ? 'AI WINS' : 'TIE';
+    resultLabelEl.style.color = result==='win'?'#c8f0c8':result==='lose'?'#f0c8c8':'#a0a0c0';
+    tieLabelEl.textContent = yourGesture.toUpperCase() + ' vs ' + aiChoice.toUpperCase();
+    addRoundPip(result);
+  }
+
+  state = 'COOLDOWN';
+  statusTextEl.textContent = 'Next round in 3s...';
+  await sleep(3000);
+
+  state = 'IDLE';
+  aiEmojiEl.textContent = '🤖';
+  aiThinkingEl.textContent = 'waiting';
+  playerGestureEl.textContent = '—';
+  aiGestureEl.textContent = '—';
+  startBtn.disabled = false;
+  statusTextEl.textContent = 'Show your hand to the camera, then press Start Round';
+}
+
+startBtn.addEventListener('click', runRound);
+
+const hands = new Hands({
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
+});
+hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.5 });
+hands.onResults(results => {
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    currentLandmarks = results.multiHandLandmarks[0];
+    drawSkeleton(currentLandmarks);
+    camOverlay.style.display = 'none';
+    if (state === 'IDLE') {
+      const g = classifyGesture(currentLandmarks);
+      playerGestureEl.textContent = g ? g.toUpperCase() : 'SHOW HAND';
+    }
+  } else {
+    currentLandmarks = null;
+    if (state === 'IDLE') playerGestureEl.textContent = '—';
+  }
+});
+
+navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, facingMode: 'user' } })
+  .then(stream => {
+    videoEl.srcObject = stream;
+    videoEl.onloadedmetadata = () => {
+      videoEl.play();
+      camOverlay.style.display = 'none';
+      const camera = new Camera(videoEl, {
+        onFrame: async () => { await hands.send({ image: videoEl }); },
+        width: 320, height: 240
+      });
+      camera.start();
+    };
+  })
+  .catch(() => {
+    camOverlay.textContent = 'CAMERA DENIED — CHECK PERMISSIONS';
+    camOverlay.style.color = '#f0c8c8';
+    startBtn.disabled = true;
+  });
+</script>
+</body>
+</html>
